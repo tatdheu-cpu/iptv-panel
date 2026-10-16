@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IPTV Panel</title>
+<style>
+body{font-family:Arial;background:#101827;color:white;margin:0;padding:20px}
+main{max-width:600px;margin:auto}
+h1{text-align:center;color:#55dca2}
+.card{background:#202b3d;border-radius:15px;padding:18px;margin:16px 0}
+input,button{box-sizing:border-box;width:100%;padding:14px;margin:7px 0;border-radius:9px;font-size:16px}
+input{background:white;border:0;color:black}
+button{border:0;background:#20b979;color:white;font-weight:bold}
+.secondary{background:#41608b}
+.danger{background:#b84343}
+.channel{padding:12px;border-bottom:1px solid #58657a;overflow-wrap:anywhere}
+small{color:#bbc8da}
+</style>
+</head>
+<body>
+<main>
+<h1>📺 IPTV PANEL</h1>
+<p style="text-align:center">Menaxhimi i listave M3U</p>
+<div class="card">
+<h2>Shto kanal</h2>
+<input id="name" placeholder="Emri i kanalit">
+<input id="url" placeholder="Linku i transmetimit https://...">
+<button onclick="add()">+ Shto kanalin</button>
+</div>
+<div class="card">
+<h2>Kanalet e mia: <span id="count">0</span></h2>
+<div id="channels"></div>
+</div>
+<div class="card">
+<h2>Krijo listën M3U</h2>
+<button onclick="download()">📥 Shkarko M3U</button>
+<button class="secondary" onclick="copyList()">📋 Kopjo M3U</button>
+<button class="danger" onclick="clearAll()">Fshi të gjitha kanalet</button>
+<p id="status"></p>
+</div>
+<small>Përdor vetëm transmetime që ke të drejtë t'i përdorësh dhe shpërndash. Të dhënat ruhen vetëm në këtë shfletues.</small>
+</main>
+<script>
+const key='iptv_channels_v1';
+let channels=[];
+try{channels=JSON.parse(localStorage.getItem(key))||[]}catch(e){}
+function save(){localStorage.setItem(key,JSON.stringify(channels));render()}
+function render(){
+document.getElementById('count').textContent=channels.length;
+let box=document.getElementById('channels');box.replaceChildren();
+channels.forEach((c,i)=>{
+let d=document.createElement('div');d.className='channel';
+let name=document.createElement('strong');name.textContent=c.name;
+let link=document.createElement('p');link.textContent=c.url;
+let btn=document.createElement('button');btn.className='danger';
+btn.textContent='Hiqe';btn.onclick=()=>{channels.splice(i,1);save()};
+d.append(name,link,btn);box.append(d);
+});
+}
+function add(){
+let name=document.getElementById('name').value.trim();
+let url=document.getElementById('url').value.trim();
+try{let u=new URL(url);if(!['http:','https:'].includes(u.protocol))throw Error()}
+catch(e){alert('Vendos një link të vlefshëm HTTP ose HTTPS');return}
+if(!name){alert('Shkruaj emrin e kanalit');return}
+channels.push({name,url});save();
+document.getElementById('name').value='';
+document.getElementById('url').value='';
+}
+function playlist(){
+return '#EXTM3U\n'+channels.map(c=>
+'#EXTINF:-1,'+c.name.replace(/[\r\n,]/g,' ')+'\n'+c.url
+).join('\n')+'\n';
+}
+function download(){
+if(!channels.length){alert('Shto një kanal fillimisht');return}
+let blob=new Blob([playlist()],{type:'audio/x-mpegurl'});
+let a=document.createElement('a');a.href=URL.createObjectURL(blob);
+a.download='kanalet.m3u';a.click();
+setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+document.getElementById('status').textContent='Lista u përgatit për shkarkim.';
+}
+async function copyList(){
+if(!channels.length){alert('Shto një kanal fillimisht');return}
+try{await navigator.clipboard.writeText(playlist());
+alert('Lista M3U u kopjua')}catch(e){alert('Kopjimi nuk u lejua')}
+}
+function clearAll(){
+if(confirm('Të fshihen të gjitha kanalet?')){channels=[];save()}
+}
+render();
+</script>
+</body>
+</html>
